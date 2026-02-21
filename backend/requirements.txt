@@ -23,6 +23,7 @@ apscheduler
 
 # Date/Time
 pytz
+tzdata
 
 # Environment
 python-dotenv
