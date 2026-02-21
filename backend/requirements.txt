@@ -1,0 +1,28 @@
+# FastAPI & Server
+fastapi
+uvicorn[standard]
+websockets
+pydantic>=2.11
+pydantic-settings
+
+# Alpaca SDK
+alpaca-py
+
+# LLM
+google-genai
+
+# Data Analysis
+numpy
+
+# Database
+aiosqlite
+sqlalchemy[asyncio]
+
+# Scheduling
+apscheduler
+
+# Date/Time
+pytz
+
+# Environment
+python-dotenv
