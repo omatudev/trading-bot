@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import NumberFlow from "@number-flow/react";
 import { Toaster } from "sonner";
 import { useTradingBot } from "@/hooks/useTradingBot";
@@ -18,6 +18,65 @@ const PERIODS = [
   { label: "1A", value: "1A" },
   { label: "All", value: "all" },
 ] as const;
+
+/* ── Mobile period dropdown ──────────── */
+function PeriodDropdown({
+  activePeriod,
+  onSelect,
+}: {
+  activePeriod: string;
+  onSelect: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const activeLabel = PERIODS.find((p) => p.value === activePeriod)?.label ?? "1M";
+
+  useEffect(() => {
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      document.removeEventListener("touchstart", handler);
+    };
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded text-muted-foreground hover:text-foreground transition-colors"
+      >
+        {activeLabel}
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="none" className={`transition-transform ${open ? "rotate-180" : ""}`}>
+          <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 bg-background/80 backdrop-blur-md rounded-lg py-1 min-w-[80px] z-50">
+          {PERIODS.map((p) => (
+            <button
+              key={p.value}
+              onClick={() => {
+                onSelect(p.value);
+                setOpen(false);
+              }}
+              className={`block w-full text-left px-3 py-1.5 text-xs transition-colors ${
+                activePeriod === p.value
+                  ? "text-foreground font-medium"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function App() {
   const {
@@ -41,6 +100,19 @@ function App() {
   const [tickerPrice, setTickerPrice] = useState<number | null>(null);
   const [chartChangePct, setChartChangePct] = useState<number | null>(null);
   const [hoverPoint, setHoverPoint] = useState<{ value: number; date: string } | null>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  /* ── Global spacebar → focus search ── */
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === " " && document.activeElement?.tagName !== "INPUT") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, []);
 
   /* ── Search handler ─────────────────── */
   const handleSearch = useCallback(
@@ -75,6 +147,10 @@ function App() {
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       handleSearch(searchInput);
+    }
+    if (e.key === "Backspace" && searchInput) {
+      e.preventDefault();
+      clearSearch();
     }
     if (e.key === "Escape") {
       setSearchInput("");
@@ -124,40 +200,31 @@ function App() {
         <header className="px-6 py-4 pointer-events-auto">
           <div className="flex items-center justify-between">
             {/* Left: Period selector */}
-            <div className="flex items-center gap-1">
-              {PERIODS.map((p) => (
-                <button
-                  key={p.value}
-                  onClick={() => setActivePeriod(p.value)}
-                  className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                    activePeriod === p.value
-                      ? "bg-white/10 text-foreground font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                  }`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
+            <PeriodDropdown activePeriod={activePeriod} onSelect={setActivePeriod} />
 
             {/* Center: Search bar */}
-            <div className="flex-1 flex justify-center px-8">
-              <div className="relative w-full max-w-sm">
-                <input
-                  type="text"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value.toUpperCase())}
-                  onKeyDown={handleSearchKeyDown}
-                  placeholder="..."
-                  className="w-full bg-white/5 border-0 rounded-full px-4 py-1.5 text-sm font-mono text-center placeholder:text-muted-foreground/50 focus:outline-none focus:bg-white/10 transition-colors"
-                />
-                {searchTicker && (
-                  <button
-                    onClick={clearSearch}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-red-500/10 outline outline-red-500/30 hover:scale-150 transition-transform duration-150 hover:cursor-pointer hover:bg-red-500/20"
-                  />
-                )}
-              </div>
+            <div className="flex items-center gap-0 font-mono text-sm text-muted-foreground">
+              <span className="opacity-50">[</span>
+              <input
+                ref={searchRef}
+                type="text"
+                size={searchInput.length || 1}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value.toUpperCase())}
+                onKeyDown={handleSearchKeyDown}
+                placeholder=""
+                className="bg-transparent border-0 px-0 text-center text-foreground font-mono text-sm focus:outline-none"
+              />
+              {searchTicker ? (
+                <button
+                  onClick={clearSearch}
+                  className="opacity-30 hover:opacity-70 transition-opacity hover:cursor-pointer text-red-400 text-xs"
+                >
+                  ×
+                </button>
+              ) : (
+                <span className="opacity-50">]</span>
+              )}
             </div>
 
             {/* Right: Status + Sidebar */}
