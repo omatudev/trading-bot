@@ -118,13 +118,16 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("✅ Database initialized")
 
-    # 2. Load persisted position open dates
+    # 2. Load persisted settings from DB (survives container restarts)
+    await _load_settings_db()
+
+    # 3. Load persisted position open dates
     await position_manager._load_position_dates()
 
-    # 3. Take initial equity snapshot (so chart has data from day 1)
+    # 4. Take initial equity snapshot (so chart has data from day 1)
     await _take_initial_snapshot()
 
-    # 4. Start the trading scheduler (9:20am, 10:00am, 3:30pm jobs)
+    # 5. Start the trading scheduler (9:20am, 10:00am, 3:30pm jobs)
     scheduler = TradingScheduler(
         alpaca_client=alpaca_client,
         llm_analyst=llm_analyst,
@@ -285,47 +288,74 @@ async def update_settings(body: dict):
     if "pre_close" in schedule:
         settings.schedule_pre_close = schedule["pre_close"]
 
-    # Persist to .env file
-    _persist_env()
+    # Persist to database (survives container restarts)
+    await _persist_settings_db()
 
     logger.info("Settings updated: rules=%s, schedule=%s", rules, schedule)
     return await get_settings()
 
 
-def _persist_env() -> None:
-    """Write current settings back to .env so they survive restarts."""
-    import pathlib
-    env_path = pathlib.Path(__file__).parent / ".env"
-    lines = env_path.read_text().splitlines() if env_path.exists() else []
+async def _persist_settings_db() -> None:
+    """Save current settings to the database so they survive container restarts."""
+    from database.models import BotSetting
+    from sqlalchemy.dialects.sqlite import insert as sqlite_upsert
 
-    env_map = {
-        "TAKE_PROFIT_PCT": str(settings.take_profit_pct),
-        "EXTRAORDINARY_GAP_SELL_PCT": str(settings.extraordinary_gap_sell_pct),
-        "MAX_POSITION_DAYS_RED": str(settings.max_position_days_red),
-        "MIN_PROFIT_TO_EXIT_RED": str(settings.min_profit_to_exit_red),
-        "SCHEDULE_PRE_OPEN": settings.schedule_pre_open,
-        "SCHEDULE_OPEN": settings.schedule_open,
-        "SCHEDULE_MID": settings.schedule_mid,
-        "SCHEDULE_PRE_CLOSE": settings.schedule_pre_close,
+    settings_map = {
+        "take_profit_pct": str(settings.take_profit_pct),
+        "extraordinary_gap_sell_pct": str(settings.extraordinary_gap_sell_pct),
+        "max_position_days_red": str(settings.max_position_days_red),
+        "min_profit_to_exit_red": str(settings.min_profit_to_exit_red),
+        "schedule_pre_open": settings.schedule_pre_open,
+        "schedule_open": settings.schedule_open,
+        "schedule_mid": settings.schedule_mid,
+        "schedule_pre_close": settings.schedule_pre_close,
     }
 
-    updated_keys: set[str] = set()
-    new_lines: list[str] = []
-    for line in lines:
-        key = line.split("=", 1)[0].strip() if "=" in line else ""
-        if key in env_map:
-            new_lines.append(f"{key}={env_map[key]}")
-            updated_keys.add(key)
-        else:
-            new_lines.append(line)
-
-    for key, val in env_map.items():
-        if key not in updated_keys:
-            new_lines.append(f"{key}={val}")
-
-    env_path.write_text("\n".join(new_lines) + "\n")
+    async with get_session() as session:
+        for key, value in settings_map.items():
+            stmt = sqlite_upsert(BotSetting).values(key=key, value=value)
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["key"],
+                set_={"value": value},
+            )
+            await session.execute(stmt)
+        await session.commit()
 
 
+async def _load_settings_db() -> None:
+    """Load persisted settings from the database on startup."""
+    from database.models import BotSetting
+    from sqlalchemy import select
+
+    try:
+        async with get_session() as session:
+            result = await session.execute(select(BotSetting))
+            rows = result.scalars().all()
+
+        if not rows:
+            return
+
+        for row in rows:
+            if row.key == "take_profit_pct":
+                settings.take_profit_pct = float(row.value)
+            elif row.key == "extraordinary_gap_sell_pct":
+                settings.extraordinary_gap_sell_pct = float(row.value)
+            elif row.key == "max_position_days_red":
+                settings.max_position_days_red = int(row.value)
+            elif row.key == "min_profit_to_exit_red":
+                settings.min_profit_to_exit_red = float(row.value)
+            elif row.key == "schedule_pre_open":
+                settings.schedule_pre_open = row.value
+            elif row.key == "schedule_open":
+                settings.schedule_open = row.value
+            elif row.key == "schedule_mid":
+                settings.schedule_mid = row.value
+            elif row.key == "schedule_pre_close":
+                settings.schedule_pre_close = row.value
+
+        logger.info("✅ Settings loaded from database")
+    except Exception as e:
+        logger.warning("Could not load settings from DB (first run?): %s", e)
 @app.post("/api/analyze/{ticker}")
 async def manual_analysis(ticker: str):
     """Trigger a manual LLM analysis for a specific ticker."""

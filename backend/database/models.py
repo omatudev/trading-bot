@@ -158,3 +158,18 @@ class EquitySnapshot(Base):
 
     def __repr__(self) -> str:
         return f"<EquitySnapshot ${self.equity:.2f} @ {self.timestamp}>"
+
+
+class BotSetting(Base):
+    """
+    Key-value store for bot settings that survive container restarts.
+    """
+
+    __tablename__ = "bot_settings"
+
+    key = Column(String(100), primary_key=True)
+    value = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    def __repr__(self) -> str:
+        return f"<BotSetting {self.key}={self.value}>"
