@@ -7,7 +7,7 @@ import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Set
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -163,7 +163,7 @@ async def _portfolio_broadcast_loop() -> None:
                     "type": "portfolio_update",
                     "portfolio": portfolio,
                     "positions": positions,
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 })
         except Exception as e:
             logger.error("Portfolio broadcast error: %s", e)
@@ -194,7 +194,7 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "timestamp": datetime.now().isoformat()}
+    return {"status": "ok", "timestamp": datetime.now(timezone.utc).isoformat()}
 
 
 @app.get("/api/portfolio")
