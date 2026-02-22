@@ -123,10 +123,22 @@ function App() {
         {/* ── Header bar ──────────────────── */}
         <header className="px-6 py-4 pointer-events-auto">
           <div className="flex items-center justify-between">
-            {/* Left: Title */}
-            <h1 className="text-lg font-semibold tracking-tight opacity-60">
-              Aragi Bot
-            </h1>
+            {/* Left: Period selector */}
+            <div className="flex items-center gap-1">
+              {PERIODS.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => setActivePeriod(p.value)}
+                  className={`px-2.5 py-1 text-xs rounded transition-colors ${
+                    activePeriod === p.value
+                      ? "bg-white/10 text-foreground font-medium"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/5"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
 
             {/* Center: Search bar */}
             <div className="flex-1 flex justify-center px-8">
@@ -257,24 +269,7 @@ function App() {
           )}
         </div>
 
-        {/* ── Bottom: Period selector ─────── */}
-        <div className="px-6 py-4 pointer-events-auto">
-          <div className="flex items-center gap-1">
-            {PERIODS.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setActivePeriod(p.value)}
-                className={`px-2.5 py-1 text-xs rounded transition-colors ${
-                  activePeriod === p.value
-                    ? "bg-white/10 text-foreground font-medium"
-                    : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
+
 
         {/* ── Overlay panels ─────────────── */}
         {(showWatchlist || showPositions || showHistory) && (
