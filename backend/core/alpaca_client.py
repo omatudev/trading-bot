@@ -22,6 +22,7 @@ from alpaca.data.requests import (
     StockLatestQuoteRequest,
     StockSnapshotRequest,
 )
+from alpaca.data.enums import DataFeed
 from alpaca.data.timeframe import TimeFrame
 
 from config import settings
@@ -248,6 +249,7 @@ class AlpacaClient:
                 timeframe=timeframe,
                 start=start,
                 end=end,
+                feed=DataFeed.IEX,
             )
             bars = await asyncio.to_thread(self.data_client.get_stock_bars, request)
             data = bars[ticker]
@@ -269,7 +271,7 @@ class AlpacaClient:
     async def get_latest_quote(self, ticker: str) -> Optional[dict[str, Any]]:
         """Get the latest quote for a ticker."""
         try:
-            request = StockLatestQuoteRequest(symbol_or_symbols=ticker)
+            request = StockLatestQuoteRequest(symbol_or_symbols=ticker, feed=DataFeed.IEX)
             quotes = await asyncio.to_thread(self.data_client.get_stock_latest_quote, request)
             quote = quotes[ticker]
             return {
@@ -286,7 +288,7 @@ class AlpacaClient:
     async def get_snapshot(self, ticker: str) -> Optional[dict[str, Any]]:
         """Get a full market snapshot for a ticker (latest trade, quote, bar)."""
         try:
-            request = StockSnapshotRequest(symbol_or_symbols=ticker)
+            request = StockSnapshotRequest(symbol_or_symbols=ticker, feed=DataFeed.IEX)
             snapshots = await asyncio.to_thread(self.data_client.get_stock_snapshot, request)
             snap = snapshots[ticker]
             return {
