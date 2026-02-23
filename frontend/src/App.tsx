@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import NumberFlow from "@number-flow/react";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import { useTradingBot } from "@/hooks/useTradingBot";
 import { useAuth, authFetch } from "@/hooks/useAuth";
 import { BackgroundChart } from "@/components/BackgroundChart";
@@ -410,6 +411,7 @@ function App() {
 
       <Toaster theme="dark" position="bottom-right" richColors closeButton />
       <Analytics />
+      <SpeedInsights />
     </div>
   );
 }
