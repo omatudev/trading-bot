@@ -12,7 +12,7 @@ interface Props {
   onAnalyze: (ticker: string) => Promise<unknown>;
 }
 
-export function WatchlistPanel({ watchlist, onAdd, onRemove, onAnalyze }: Props) {
+const WatchlistPanel = ({ watchlist, onAdd, onRemove, onAnalyze }: Props) => {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [analyzingTicker, setAnalyzingTicker] = useState<string | null>(null);
@@ -121,3 +121,5 @@ export function WatchlistPanel({ watchlist, onAdd, onRemove, onAnalyze }: Props)
     </Card>
   );
 }
+
+export default WatchlistPanel;

@@ -61,7 +61,7 @@ function formatDateTime(dateStr?: string | null): string {
   }
 }
 
-export function TradeHistory() {
+const TradeHistory = () => {
   const [trades, setTrades] = useState<Trade[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -174,3 +174,5 @@ export function TradeHistory() {
     </Card>
   );
 }
+
+export default TradeHistory;

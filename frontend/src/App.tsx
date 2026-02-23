@@ -7,9 +7,10 @@ import { useTradingBot } from "@/hooks/useTradingBot";
 import { useAuth, authFetch } from "@/hooks/useAuth";
 import { BackgroundChart } from "@/components/BackgroundChart";
 import { API_URL } from "@/config";
-import { PositionsTable } from "@/components/PositionsTable";
-import { TradeHistory } from "@/components/TradeHistory";
-import { WatchlistPanel } from "@/components/WatchlistPanel";
+import { Suspense, lazy } from "react";
+const PositionsTable = lazy(() => import("@/components/PositionsTable"));
+const TradeHistory = lazy(() => import("@/components/TradeHistory"));
+const WatchlistPanel = lazy(() => import("@/components/WatchlistPanel"));
 import { ConfigSidebar } from "@/components/ConfigSidebar";
 
 const PERIODS = [
@@ -389,22 +390,24 @@ function App() {
         {/* ── Overlay panels ─────────────── */}
         {(showWatchlist || showPositions || showHistory) && (
           <div className="absolute bottom-14 left-0 right-0 max-h-[50vh] overflow-y-auto px-6 pb-2 space-y-4 bg-gradient-to-t from-background/95 via-background/80 to-transparent pt-16 pointer-events-auto">
-            {showWatchlist && (
-              <WatchlistPanel
-                watchlist={watchlist}
-                onAdd={addTicker}
-                onRemove={removeTicker}
-                onAnalyze={triggerAnalysis}
-              />
-            )}
-            {showPositions && (
-              <PositionsTable
-                positions={positions}
-                onTickerClick={toggleChart}
-                activeCharts={searchTicker ? [searchTicker] : []}
-              />
-            )}
-            {showHistory && <TradeHistory />}
+            <Suspense fallback={<div className="text-center text-xs text-muted-foreground py-8">Cargando panel...</div>}>
+              {showWatchlist && (
+                <WatchlistPanel
+                  watchlist={watchlist}
+                  onAdd={addTicker}
+                  onRemove={removeTicker}
+                  onAnalyze={triggerAnalysis}
+                />
+              )}
+              {showPositions && (
+                <PositionsTable
+                  positions={positions}
+                  onTickerClick={toggleChart}
+                  activeCharts={searchTicker ? [searchTicker] : []}
+                />
+              )}
+              {showHistory && <TradeHistory />}
+            </Suspense>
           </div>
         )}
       </div>

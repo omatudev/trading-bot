@@ -16,7 +16,7 @@ interface Props {
   activeCharts?: string[];
 }
 
-export function PositionsTable({ positions, onTickerClick, activeCharts = [] }: Props) {
+const PositionsTable = ({ positions, onTickerClick, activeCharts = [] }: Props) => {
   return (
     <Card className="border-0 bg-transparent shadow-none">
       <CardHeader className="pb-2">
@@ -109,3 +109,5 @@ export function PositionsTable({ positions, onTickerClick, activeCharts = [] }: 
     </Card>
   );
 }
+
+export default PositionsTable;
