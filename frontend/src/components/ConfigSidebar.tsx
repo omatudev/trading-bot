@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import type { Portfolio } from "@/types";
 
 import { API_URL } from "@/config";
+import { authFetch } from "@/hooks/useAuth";
 
 /* ------------------------------------------------------------------ */
 /*  Props                                                              */
@@ -26,6 +27,7 @@ interface Props {
   onToggleHistory: (v: boolean) => void;
   showWatchlist: boolean;
   onToggleWatchlist: (v: boolean) => void;
+  onSignOut?: () => void;
 }
 
 /* ------------------------------------------------------------------ */
@@ -77,6 +79,7 @@ export function ConfigSidebar({
   onToggleHistory,
   showWatchlist,
   onToggleWatchlist,
+  onSignOut,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -101,7 +104,7 @@ export function ConfigSidebar({
   /* ── Load settings from backend when sidebar opens ── */
   const loadSettings = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/settings`);
+      const res = await authFetch(`${API_URL}/settings`);
       const data = await res.json();
       if (data.schedule) {
         setSchedule({
@@ -135,7 +138,7 @@ export function ConfigSidebar({
       saveTimer.current = setTimeout(async () => {
         setSaving(true);
         try {
-          await fetch(`${API_URL}/settings`, {
+          await authFetch(`${API_URL}/settings`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -344,6 +347,19 @@ export function ConfigSidebar({
                 />
               </div>
             </section>
+
+            {/* Sign out */}
+            {onSignOut && (
+              <section>
+                <Separator className="opacity-30" />
+                <button
+                  onClick={onSignOut}
+                  className="w-full mt-4 py-2 text-xs text-red-400 hover:text-red-300 transition-colors"
+                >
+                  Sign out
+                </button>
+              </section>
+            )}
 
             <div className="h-4" />
           </div>

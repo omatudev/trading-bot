@@ -10,10 +10,17 @@ from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 from typing import Set
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 from config import settings
+from core.auth import (
+    create_jwt,
+    require_auth,
+    verify_google_token,
+    verify_ws_token,
+)
 from core.alpaca_client import AlpacaClient
 from core.llm_analyst import LLMAnalyst
 from core.rules_engine import RulesEngine
@@ -193,7 +200,34 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------------------------
-# REST Endpoints
+# Auth Endpoint (public)
+# ---------------------------------------------------------------------------
+class GoogleAuthRequest(BaseModel):
+    token: str
+
+
+@app.post("/api/auth/google")
+async def google_auth(body: GoogleAuthRequest):
+    """Exchange a Google id_token for a JWT."""
+    payload = verify_google_token(body.token)
+    email = payload.get("email", "")
+    if email != settings.allowed_email:
+        from fastapi import HTTPException, status as http_status
+        raise HTTPException(
+            status_code=http_status.HTTP_403_FORBIDDEN,
+            detail="Access denied — email not authorized",
+        )
+    jwt_token = create_jwt(email)
+    return {
+        "token": jwt_token,
+        "email": email,
+        "name": payload.get("name", ""),
+        "picture": payload.get("picture", ""),
+    }
+
+
+# ---------------------------------------------------------------------------
+# REST Endpoints (protected)
 # ---------------------------------------------------------------------------
 @app.get("/api/health")
 async def health():
@@ -201,7 +235,7 @@ async def health():
 
 
 @app.get("/api/portfolio")
-async def get_portfolio():
+async def get_portfolio(_=Depends(require_auth)):
     """Get current portfolio summary."""
     portfolio = await alpaca_client.get_portfolio_summary()
     positions = await alpaca_client.get_open_positions()
@@ -209,7 +243,7 @@ async def get_portfolio():
 
 
 @app.get("/api/watchlist")
-async def get_watchlist():
+async def get_watchlist(_=Depends(require_auth)):
     """Get all tickers in the watchlist with their profiles."""
     async with get_session() as session:
         profiles = await ticker_profiler.get_all_profiles(session)
@@ -217,7 +251,7 @@ async def get_watchlist():
 
 
 @app.post("/api/watchlist/{ticker}")
-async def add_to_watchlist(ticker: str):
+async def add_to_watchlist(ticker: str, _=Depends(require_auth)):
     """Add a ticker to the watchlist — runs historical analysis automatically."""
     ticker = ticker.upper().strip()
     logger.info("Adding %s to watchlist...", ticker)
@@ -227,7 +261,7 @@ async def add_to_watchlist(ticker: str):
 
 
 @app.delete("/api/watchlist/{ticker}")
-async def remove_from_watchlist(ticker: str):
+async def remove_from_watchlist(ticker: str, _=Depends(require_auth)):
     """Remove a ticker from the watchlist."""
     ticker = ticker.upper().strip()
     async with get_session() as session:
@@ -236,7 +270,7 @@ async def remove_from_watchlist(ticker: str):
 
 
 @app.get("/api/signals")
-async def get_signals():
+async def get_signals(_=Depends(require_auth)):
     """Get the latest LLM signals."""
     async with get_session() as session:
         signals = await news_scanner.get_recent_signals(session, limit=20)
@@ -244,7 +278,7 @@ async def get_signals():
 
 
 @app.get("/api/settings")
-async def get_settings():
+async def get_settings(_=Depends(require_auth)):
     """Get current bot settings (rules + schedule)."""
     return {
         "rules": {
@@ -263,7 +297,7 @@ async def get_settings():
 
 
 @app.put("/api/settings")
-async def update_settings(body: dict):
+async def update_settings(body: dict, _=Depends(require_auth)):
     """Update bot settings (rules + schedule) at runtime."""
     rules = body.get("rules", {})
     schedule = body.get("schedule", {})
@@ -357,7 +391,7 @@ async def _load_settings_db() -> None:
     except Exception as e:
         logger.warning("Could not load settings from DB (first run?): %s", e)
 @app.post("/api/analyze/{ticker}")
-async def manual_analysis(ticker: str):
+async def manual_analysis(ticker: str, _=Depends(require_auth)):
     """Trigger a manual LLM analysis for a specific ticker."""
     ticker = ticker.upper().strip()
     signal = await news_scanner.analyze_ticker(ticker)
@@ -368,7 +402,7 @@ async def manual_analysis(ticker: str):
 
 
 @app.get("/api/bars/{ticker}")
-async def get_bars(ticker: str, days: int = 30, tf: str = "day"):
+async def get_bars(ticker: str, days: int = 30, tf: str = "day", _=Depends(require_auth)):
     """Get historical bars for charting.
     
     tf options: 'min' (1-minute), '5min', '15min', 'hour', 'day'
@@ -396,7 +430,7 @@ async def get_bars(ticker: str, days: int = 30, tf: str = "day"):
 
 
 @app.get("/api/portfolio/history")
-async def get_portfolio_history(period: str = "1M"):
+async def get_portfolio_history(period: str = "1M", _=Depends(require_auth)):
     """Get portfolio equity history from our own snapshots."""
     from database.models import EquitySnapshot
     from sqlalchemy import select
@@ -439,7 +473,7 @@ async def get_portfolio_history(period: str = "1M"):
 
 
 @app.get("/api/trades")
-async def get_trades():
+async def get_trades(_=Depends(require_auth)):
     """Get trade history."""
     from database.models import TradeLog
     from sqlalchemy import select
@@ -472,8 +506,11 @@ async def get_trades():
 # WebSocket
 # ---------------------------------------------------------------------------
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    """Dashboard WebSocket — receives real-time portfolio updates."""
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(default="")):
+    """Dashboard WebSocket — requires JWT token as query param."""
+    if not verify_ws_token(token):
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
     await ws_manager.connect(websocket)
     try:
         while True:

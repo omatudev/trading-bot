@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { Portfolio, Position, Signal, TickerProfile, WsMessage } from "@/types";
 import { API_URL, WS_URL } from "@/config";
+import { authFetch, getAuthWsUrl, useAuth } from "@/hooks/useAuth";
 
 interface DashboardState {
   portfolio: Portfolio | null;
@@ -17,6 +18,7 @@ interface DashboardState {
  * and provides REST API helpers.
  */
 export function useTradingBot() {
+  const { token } = useAuth();
   const [state, setState] = useState<DashboardState>({
     portfolio: null,
     positions: [],
@@ -32,8 +34,9 @@ export function useTradingBot() {
   // ───────────────────────── WebSocket ─────────────────────────
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
+    if (!token) return;
 
-    const ws = new WebSocket(WS_URL);
+    const ws = new WebSocket(getAuthWsUrl(WS_URL));
 
     ws.onopen = () => {
       setState((s) => ({ ...s, connected: true }));
@@ -102,7 +105,7 @@ export function useTradingBot() {
     };
 
     wsRef.current = ws;
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     connect();
@@ -115,7 +118,7 @@ export function useTradingBot() {
   // ───────────────────────── REST helpers ─────────────────────────
   const fetchPortfolio = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/portfolio`);
+      const res = await authFetch(`${API_URL}/portfolio`);
       const data = await res.json();
       setState((s) => ({
         ...s,
@@ -129,7 +132,7 @@ export function useTradingBot() {
 
   const fetchSignals = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/signals`);
+      const res = await authFetch(`${API_URL}/signals`);
       const data = await res.json();
       setState((s) => ({ ...s, signals: data.signals }));
     } catch (err) {
@@ -139,7 +142,7 @@ export function useTradingBot() {
 
   const fetchWatchlist = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/watchlist`);
+      const res = await authFetch(`${API_URL}/watchlist`);
       const data = await res.json();
       setState((s) => ({ ...s, watchlist: data.watchlist }));
     } catch (err) {
@@ -149,7 +152,7 @@ export function useTradingBot() {
 
   const addTicker = useCallback(async (ticker: string) => {
     try {
-      const res = await fetch(`${API_URL}/watchlist/${ticker}`, {
+      const res = await authFetch(`${API_URL}/watchlist/${ticker}`, {
         method: "POST",
       });
       const data = await res.json();
@@ -163,7 +166,7 @@ export function useTradingBot() {
 
   const removeTicker = useCallback(async (ticker: string) => {
     try {
-      await fetch(`${API_URL}/watchlist/${ticker}`, { method: "DELETE" });
+      await authFetch(`${API_URL}/watchlist/${ticker}`, { method: "DELETE" });
       await fetchWatchlist();
     } catch (err) {
       console.error("Failed to remove ticker:", err);
@@ -172,7 +175,7 @@ export function useTradingBot() {
 
   const triggerAnalysis = useCallback(async (ticker: string) => {
     try {
-      const res = await fetch(`${API_URL}/analyze/${ticker}`, {
+      const res = await authFetch(`${API_URL}/analyze/${ticker}`, {
         method: "POST",
       });
       return await res.json();

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { API_URL } from "@/config";
+import { authFetch } from "@/hooks/useAuth";
 import {
   Table,
   TableBody,
@@ -66,7 +67,7 @@ export function TradeHistory() {
 
   const fetchTrades = useCallback(async () => {
     try {
-      const res = await fetch(`${API_URL}/trades`);
+      const res = await authFetch(`${API_URL}/trades`);
       if (res.ok) {
         const data = await res.json();
         setTrades(data.trades ?? []);

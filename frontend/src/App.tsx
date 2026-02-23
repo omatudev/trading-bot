@@ -2,6 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import NumberFlow from "@number-flow/react";
 import { Toaster } from "sonner";
 import { useTradingBot } from "@/hooks/useTradingBot";
+import { useAuth, authFetch } from "@/hooks/useAuth";
 import { BackgroundChart } from "@/components/BackgroundChart";
 import { API_URL } from "@/config";
 import { PositionsTable } from "@/components/PositionsTable";
@@ -78,7 +79,42 @@ function PeriodDropdown({
   );
 }
 
+/* ── Login screen ─────────────────────── */
+function LoginScreen() {
+  const { signIn } = useAuth();
+  const btnRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const renderButton = () => {
+      if (btnRef.current && window.google?.accounts) {
+        window.google.accounts.id.renderButton(btnRef.current, {
+          theme: "filled_black",
+          size: "large",
+          shape: "pill",
+          text: "signin_with",
+        });
+      }
+    };
+
+    if (window.google?.accounts) {
+      renderButton();
+    } else {
+      const script = document.getElementById("google-gis-script");
+      script?.addEventListener("load", renderButton);
+      return () => script?.removeEventListener("load", renderButton);
+    }
+  }, [signIn]);
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center text-foreground gap-6">
+      <p className="text-sm text-muted-foreground tracking-widest uppercase">Private access</p>
+      <div ref={btnRef} />
+    </div>
+  );
+}
+
 function App() {
+  const { user, loading, signOut } = useAuth();
   const {
     portfolio,
     positions,
@@ -125,7 +161,7 @@ function App() {
       }
       setSearchTicker(ticker);
       try {
-        const res = await fetch(
+        const res = await authFetch(
           `${API_URL}/bars/${ticker}?days=5`
         );
         if (res.ok) {
@@ -169,7 +205,7 @@ function App() {
   const toggleChart = useCallback((ticker: string) => {
     setSearchInput(ticker);
     setSearchTicker(ticker);
-    fetch(`${API_URL}/bars/${ticker}?days=5`)
+    authFetch(`${API_URL}/bars/${ticker}?days=5`)
       .then((r) => r.json())
       .then((data) => {
         const bars = data.bars ?? [];
@@ -188,6 +224,14 @@ function App() {
   const numericValue = hoverPoint ? hoverPoint.value : baseValue;
 
   const isPositive = portfolio ? portfolio.daily_pnl >= 0 : true;
+
+  if (loading) {
+    return <div className="min-h-screen" />;
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
 
   return (
     <div className="relative min-h-screen text-foreground overflow-hidden">
@@ -265,6 +309,7 @@ function App() {
                 onToggleHistory={setShowHistory}
                 showWatchlist={showWatchlist}
                 onToggleWatchlist={setShowWatchlist}
+                onSignOut={signOut}
               />
             </div>
           </div>

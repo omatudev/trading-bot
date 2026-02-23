@@ -25,5 +25,10 @@ apscheduler
 pytz
 tzdata
 
+# Auth
+python-jose[cryptography]
+google-auth
+requests
+
 # Environment
 python-dotenv

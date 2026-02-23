@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { API_URL } from "@/config";
+import { authFetch } from "@/hooks/useAuth";
 
 const W = 1000;
 const H = 400;
@@ -84,7 +85,7 @@ export function BackgroundChart({ ticker, period, onChangeCalculated, onHoverPoi
           all: { days: 1825, tf: "day" },
         };
         const { days, tf } = periodConfig[period] ?? { days: 30, tf: "day" };
-        const res = await fetch(`${API_URL}/bars/${ticker}?days=${days}&tf=${tf}`);
+        const res = await authFetch(`${API_URL}/bars/${ticker}?days=${days}&tf=${tf}`);
         if (!res.ok) return;
         const data = await res.json();
         points = (data.bars ?? []).map((b: { timestamp: string; close: number }) => {
@@ -99,7 +100,7 @@ export function BackgroundChart({ ticker, period, onChangeCalculated, onHoverPoi
           return { date, value: b.close };
         });
       } else {
-        const res = await fetch(`${API_URL}/portfolio/history?period=${period}`);
+        const res = await authFetch(`${API_URL}/portfolio/history?period=${period}`);
         if (!res.ok) return;
         const data = await res.json();
         const history: { timestamp: number; equity: number }[] = data.history ?? [];
