@@ -203,27 +203,28 @@ function App() {
             <PeriodDropdown activePeriod={activePeriod} onSelect={setActivePeriod} />
 
             {/* Center: Search bar */}
-            <div className="flex items-center gap-0 font-mono text-sm text-muted-foreground">
-              <span className="opacity-50">[</span>
-              <input
-                ref={searchRef}
-                type="text"
-                size={searchInput.length || 1}
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value.toUpperCase())}
-                onKeyDown={handleSearchKeyDown}
-                placeholder=""
-                className="bg-transparent border-0 px-0 text-center text-foreground font-mono text-sm focus:outline-none"
-              />
-              {searchTicker ? (
+            <div className="flex items-center gap-1.5 font-mono text-sm text-muted-foreground">
+              <div className="flex items-center gap-0">
+                <span className="opacity-50">[</span>
+                <input
+                  ref={searchRef}
+                  type="text"
+                  size={searchInput.length || 1}
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value.toUpperCase())}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder=""
+                  className="bg-transparent border-0 px-0 text-center text-foreground font-mono text-sm focus:outline-none"
+                />
+                <span className="opacity-50">]</span>
+              </div>
+              {searchTicker && (
                 <button
                   onClick={clearSearch}
-                  className="opacity-30 hover:opacity-70 transition-opacity hover:cursor-pointer text-red-400 text-xs"
+                  className="opacity-40 hover:opacity-100 transition-opacity hover:cursor-pointer text-red-400 text-xs border border-white/10 rounded px-1.5 py-0.5 hover:border-red-400/40"
                 >
                   ×
                 </button>
-              ) : (
-                <span className="opacity-50">]</span>
               )}
             </div>
 
