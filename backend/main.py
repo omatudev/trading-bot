@@ -38,6 +38,7 @@ logging.basicConfig(
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
 )
 logger = logging.getLogger("trading_bot")
+logger.info(f"DB URL: {settings.database_url}")
 
 # ---------------------------------------------------------------------------
 # WebSocket connection manager
