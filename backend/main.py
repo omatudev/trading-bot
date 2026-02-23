@@ -332,7 +332,7 @@ async def update_settings(body: dict, _=Depends(require_auth)):
 async def _persist_settings_db() -> None:
     """Save current settings to the database so they survive container restarts."""
     from database.models import BotSetting
-    from sqlalchemy.dialects.sqlite import insert as sqlite_upsert
+    from sqlalchemy.dialects.postgresql import insert as pg_upsert
 
     settings_map = {
         "take_profit_pct": str(settings.take_profit_pct),
@@ -347,7 +347,7 @@ async def _persist_settings_db() -> None:
 
     async with get_session() as session:
         for key, value in settings_map.items():
-            stmt = sqlite_upsert(BotSetting).values(key=key, value=value)
+            stmt = pg_upsert(BotSetting).values(key=key, value=value)
             stmt = stmt.on_conflict_do_update(
                 index_elements=["key"],
                 set_={"value": value},

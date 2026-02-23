@@ -1,5 +1,5 @@
 """
-Database Models — SQLAlchemy async models for SQLite.
+Database Models — SQLAlchemy async models for PostgreSQL (Neon).
 Stores ticker profiles, signals, and trade history.
 """
 

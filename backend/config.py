@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
 
     # Database
-    database_url: str = "sqlite+aiosqlite:///./database/trading_bot.db"
+    database_url: str = "postgresql+asyncpg://neondb_owner:npg_tm6h1dowkXDg@ep-cool-river-aijc9n18-pooler.c-4.us-east-1.aws.neon.tech/neondb?ssl=require"
 
     # CORS
     allowed_origins: list[str] = [

@@ -15,7 +15,7 @@ google-genai
 numpy
 
 # Database
-aiosqlite
+asyncpg
 sqlalchemy[asyncio]
 
 # Scheduling
