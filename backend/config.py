@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     ]
 
     # Logging
-    log_level: str = "INFO"
+    log_level: str = "WARNING"
 
     # Auth
     google_client_id: str = "879038766799-lihogd5k6ed49n9gbv29min1mftfp78h.apps.googleusercontent.com"
