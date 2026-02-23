@@ -45,7 +45,7 @@ Sistema de **swing trading automatizado** para acciones del mercado estadouniden
 | uvicorn            | latest  | Servidor ASGI                                  |
 | alpaca-py          | latest  | API de trading (paper)                         |
 | google-genai       | latest  | Gemini 2.5 Flash LLM                           |
-| SQLAlchemy (async) | latest  | ORM con aiosqlite                              |
+| SQLAlchemy (async) | latest  | ORM con asyncpg (PostgreSQL)                   |
 | APScheduler        | latest  | Tareas programadas                             |
 | numpy              | latest  | Cálculos estadísticos para perfiles de tickers |
 | pydantic-settings  | latest  | Configuración desde `.env`                     |
@@ -85,8 +85,7 @@ trading-bot/
 │   │   ├── rules_engine.py     # Reglas determinísticas de trading
 │   │   └── scheduler.py        # Tareas programadas (APScheduler)
 │   ├── database/
-│   │   ├── models.py           # Modelos SQLAlchemy (5 tablas)
-│   │   └── trading_bot.db      # Base de datos SQLite
+│   │   └── models.py           # Modelos SQLAlchemy (6 tablas)
 │   └── modules/
 │       ├── news_scanner.py     # Escaneo de noticias + análisis LLM
 │       ├── position_manager.py # Gestión de posiciones y ejecución
@@ -184,19 +183,19 @@ trading-bot/
 
 Singleton `settings = Settings()` que lee desde `.env`:
 
-| Variable                               | Default                                         | Descripción                              |
-| -------------------------------------- | ----------------------------------------------- | ---------------------------------------- |
-| `alpaca_api_key`                       | `""`                                            | API key de Alpaca                        |
-| `alpaca_secret_key`                    | `""`                                            | Secret key de Alpaca                     |
-| `alpaca_base_url`                      | `https://paper-api.alpaca.markets`              | Paper trading                            |
-| `gemini_api_key`                       | `""`                                            | Google Gemini API key                    |
-| `database_url`                         | `sqlite+aiosqlite:///./database/trading_bot.db` | BD async                                 |
-| `take_profit_pct`                      | `10.0`                                          | % para auto-venta (take profit)          |
-| `max_position_days_red`                | `15`                                            | Días máx en rojo antes de esperar salida |
-| `min_profit_to_exit_red`               | `0.5`                                           | % mínimo para salir de zona roja         |
-| `extraordinary_gap_sell_pct`           | `60.0`                                          | % a vender en gap extraordinario         |
-| `ticker_profile_recalc_days`           | `30`                                            | Días entre recálculos de perfil          |
-| `schedule_pre_open/open/mid/pre_close` | Específicos                                     | Horarios de ejecución (ET)               |
+| Variable                               | Default                                    | Descripción                              |
+| -------------------------------------- | ------------------------------------------ | ---------------------------------------- |
+| `alpaca_api_key`                       | `""`                                       | API key de Alpaca                        |
+| `alpaca_secret_key`                    | `""`                                       | Secret key de Alpaca                     |
+| `alpaca_base_url`                      | `https://paper-api.alpaca.markets`         | Paper trading                            |
+| `gemini_api_key`                       | `""`                                       | Google Gemini API key                    |
+| `database_url`                         | `postgresql+asyncpg://...neon.tech/neondb` | BD PostgreSQL (Neon)                     |
+| `take_profit_pct`                      | `10.0`                                     | % para auto-venta (take profit)          |
+| `max_position_days_red`                | `15`                                       | Días máx en rojo antes de esperar salida |
+| `min_profit_to_exit_red`               | `0.5`                                      | % mínimo para salir de zona roja         |
+| `extraordinary_gap_sell_pct`           | `60.0`                                     | % a vender en gap extraordinario         |
+| `ticker_profile_recalc_days`           | `30`                                       | Días entre recálculos de perfil          |
+| `schedule_pre_open/open/mid/pre_close` | Específicos                                | Horarios de ejecución (ET)               |
 
 ### 5.2 `alpaca_client.py` — Wrapper de Alpaca
 
@@ -357,7 +356,7 @@ export const WS_URL = "ws://localhost:8000/ws";
 
 ## 7. Base de Datos
 
-SQLAlchemy async + aiosqlite. Archivo: `backend/database/trading_bot.db`
+SQLAlchemy async + asyncpg. Base de datos: **PostgreSQL en Neon** (persistente entre deploys).
 
 ### Tablas
 
@@ -697,7 +696,7 @@ ALPACA_API_KEY=tu_key_aqui
 ALPACA_SECRET_KEY=tu_secret_aqui
 ALPACA_BASE_URL=https://paper-api.alpaca.markets
 GEMINI_API_KEY=tu_gemini_key_aqui
-DATABASE_URL=sqlite+aiosqlite:///./database/trading_bot.db
+DATABASE_URL=postgresql+asyncpg://user:pass@host/neondb?ssl=require
 ```
 
 ### Ports
@@ -708,5 +707,5 @@ DATABASE_URL=sqlite+aiosqlite:///./database/trading_bot.db
 
 ---
 
-> **Última actualización**: Junio 2025
+> **Última actualización**: Febrero 2026
 > **Generado por**: Auditoría completa del codebase (frontend + backend)
