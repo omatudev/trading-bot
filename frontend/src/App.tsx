@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import NumberFlow from "@number-flow/react";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/react";
 import { useTradingBot } from "@/hooks/useTradingBot";
 import { useAuth, authFetch } from "@/hooks/useAuth";
 import { BackgroundChart } from "@/components/BackgroundChart";
@@ -408,6 +409,7 @@ function App() {
       </div>
 
       <Toaster theme="dark" position="bottom-right" richColors closeButton />
+      <Analytics />
     </div>
   );
 }
